@@ -30,6 +30,8 @@ const FileManager: React.FC = () => {
       path: '/folder1'
     }
   ])
+  const [showFolderModal, setShowFolderModal] = useState<boolean>(false)
+  const [newFolderName, setNewFolderName] = useState<string>('')
 
   const handleFileUpload = (newFiles: any[]) => {
     setFiles([...files, ...newFiles])
@@ -45,6 +47,8 @@ const FileManager: React.FC = () => {
       path: `${currentFolder}${folderName}`
     }
     setFiles([...files, newFolder])
+    setShowFolderModal(false)
+    setNewFolderName('')
   }
 
   const handleFileDelete = (fileId: number) => {
@@ -55,6 +59,12 @@ const FileManager: React.FC = () => {
     setCurrentFolder(folderPath)
   }
 
+  const handleCreateFolder = () => {
+    if (newFolderName.trim()) {
+      handleFolderCreate(newFolderName.trim())
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -63,12 +73,7 @@ const FileManager: React.FC = () => {
           <div className="flex space-x-4">
             <button 
               className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200"
-              onClick={() => {
-                const folderName = prompt('请输入文件夹名称')
-                if (folderName) {
-                  handleFolderCreate(folderName)
-                }
-              }}
+              onClick={() => setShowFolderModal(true)}
             >
               创建文件夹
             </button>
@@ -103,6 +108,45 @@ const FileManager: React.FC = () => {
           onFolderNavigate={handleFolderNavigate}
         />
       </div>
+
+      {/* Create Folder Modal */}
+      {showFolderModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">创建文件夹</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                文件夹名称
+              </label>
+              <input
+                type="text"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入文件夹名称"
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition duration-200"
+                onClick={() => {
+                  setShowFolderModal(false)
+                  setNewFolderName('')
+                }}
+              >
+                取消
+              </button>
+              <button
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 transition duration-200"
+                onClick={handleCreateFolder}
+              >
+                创建
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
