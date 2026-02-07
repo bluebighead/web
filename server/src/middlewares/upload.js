@@ -2,50 +2,56 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// 确保上传目录存在
-const uploadDir = path.join(__dirname, '..', '..', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// 配置存储
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir);
+    // 简化存储逻辑，所有文件都存储到uploads根目录
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  },
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
 });
 
-// 文件过滤
 const fileFilter = (req, file, cb) => {
-  // 允许的文件类型
   const allowedTypes = [
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'video/mp4',
+    'video/webm',
+    'audio/mpeg',
+    'audio/wav',
+    'audio/ogg',
     'application/pdf',
-    'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'video/mp4', 'video/webm',
-    'audio/mp3', 'audio/wav', 'audio/ogg'
+    'text/plain',
+    'application/json',
+    'text/html',
+    'text/css',
+    'application/javascript',
+    'text/javascript'
   ];
 
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('File type not allowed'), false);
+    cb(new Error('Invalid file type. Only images, videos, audio, and documents are allowed.'), false);
   }
 };
 
-// 创建上传中间件
 const upload = multer({
-  storage,
-  fileFilter,
+  storage: storage,
+  fileFilter: fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE),
-  },
+    fileSize: 50 * 1024 * 1024 // 50MB limit
+  }
 });
 
 module.exports = upload;

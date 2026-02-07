@@ -1,68 +1,104 @@
-const categoryService = require('../services/categoryService');
+const Category = require('../models/Category');
 
-// 创建分类
-const createCategory = async (req, res) => {
-  try {
-    const { name, parentId = null } = req.body;
+const categoryController = {
+  getAllCategories: (req, res) => {
+    try {
+      const categories = Category.getAll();
+      res.json({ categories });
+    } catch (err) {
+      res.status(500).json({ message: 'Error fetching categories', error: err.message });
+    }
+  },
 
-    // 调用分类服务创建分类
-    const category = await categoryService.createCategory(name, req.user._id, parentId);
-
-    res.status(201).json({ success: true, category });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
-
-// 获取分类列表
-const getCategories = async (req, res) => {
-  try {
-    // 调用分类服务获取分类列表
-    const categories = await categoryService.getCategories(req.user._id);
-    res.status(200).json({ success: true, categories });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
-
-// 更新分类
-const updateCategory = async (req, res) => {
-  try {
+  getCategoryById: (req, res) => {
     const { id } = req.params;
-    const { name, parentId } = req.body;
+    try {
+      const category = Category.getById(id);
+      if (!category) {
+        return res.status(404).json({ message: 'Category not found' });
+      }
+      res.json({ category });
+    } catch (err) {
+      res.status(500).json({ message: 'Error fetching category', error: err.message });
+    }
+  },
 
-    // 调用分类服务更新分类
-    const category = await categoryService.updateCategory(id, { name, parentId }, req.user._id);
+  createCategory: (req, res) => {
+    const { name, parentId, level } = req.body;
 
-    res.status(200).json({ success: true, category });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
+    if (!name) {
+      return res.status(400).json({ message: 'Category name is required' });
+    }
 
-// 删除分类
-const deleteCategory = async (req, res) => {
-  try {
+    if (level > 2) {
+      return res.status(400).json({ message: 'Category level cannot exceed 3' });
+    }
+
+    try {
+      const categoryData = {
+        name,
+        parent_id: parentId || null,
+        level: level || 0
+      };
+      const category = Category.create(categoryData);
+      res.status(201).json({ message: 'Category created successfully', category });
+    } catch (err) {
+      res.status(500).json({ message: 'Error creating category', error: err.message });
+    }
+  },
+
+  updateCategory: (req, res) => {
+    const { id } = req.params;
+    const { name, parentId, level } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ message: 'Category name is required' });
+    }
+
+    if (level > 2) {
+      return res.status(400).json({ message: 'Category level cannot exceed 3' });
+    }
+
+    try {
+      const categoryData = {
+        name,
+        parent_id: parentId || null,
+        level: level || 0
+      };
+      Category.update(id, categoryData);
+      res.json({ message: 'Category updated successfully' });
+    } catch (err) {
+      res.status(500).json({ message: 'Error updating category', error: err.message });
+    }
+  },
+
+  deleteCategory: (req, res) => {
     const { id } = req.params;
 
-    // 调用分类服务删除分类
-    const result = await categoryService.deleteCategory(id, req.user._id);
+    try {
+      const hasChildren = Category.hasChildren(id);
+      if (hasChildren) {
+        return res.status(400).json({ 
+          message: 'Category has subcategories. Please delete them first.' 
+        });
+      }
 
-    res.status(200).json(result);
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+      Category.delete(id);
+      res.json({ message: 'Category deleted successfully' });
+    } catch (err) {
+      res.status(500).json({ message: 'Error deleting category', error: err.message });
+    }
+  },
+
+  getSubCategories: (req, res) => {
+    const { parentId } = req.params;
+    try {
+      const categories = Category.getByParentId(parentId);
+      res.json({ categories });
+    } catch (err) {
+      res.status(500).json({ message: 'Error fetching subcategories', error: err.message });
+    }
   }
 };
 
-// 获取分类树
-const getCategoryTree = async (req, res) => {
-  try {
-    // 调用分类服务获取分类树
-    const tree = await categoryService.getCategoryTree(req.user._id);
-    res.status(200).json({ success: true, tree });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
-
-module.exports = { createCategory, getCategories, updateCategory, deleteCategory, getCategoryTree };
+module.exports = categoryController;

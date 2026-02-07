@@ -1,19 +1,33 @@
-const mongoose = require('mongoose');
-const dotenv = require('dotenv');
+const fs = require('fs');
+const path = require('path');
 
-dotenv.config();
+const dbPath = path.join(__dirname, '..', 'db.json');
 
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log('MongoDB connected successfully');
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
+function readDB() {
+  if (!fs.existsSync(dbPath)) {
+    const initialData = { users: [], categories: [], files: [], folders: [] };
+    fs.writeFileSync(dbPath, JSON.stringify(initialData, null, 2));
+    return initialData;
   }
+  const data = fs.readFileSync(dbPath, 'utf8');
+  return JSON.parse(data);
+}
+
+function writeDB(data) {
+  fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+}
+
+const db = {
+  read: () => readDB(),
+  write: (data) => writeDB(data),
+  data: readDB()
 };
 
-module.exports = connectDB;
+console.log('Connected to JSON database');
+
+module.exports = db;

@@ -1,90 +1,170 @@
-const fileService = require('../services/fileService');
+const File = require('../models/File');
+const Folder = require('../models/Folder');
+const fs = require('fs');
+const path = require('path');
 
-// 上传文件
-const uploadFile = async (req, res) => {
-  try {
+const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
+
+const fileController = {
+  uploadFile: (req, res) => {
     if (!req.file) {
-      return res.status(400).json({ success: false, error: 'No file uploaded' });
+      return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // 调用文件服务上传文件
-    const file = await fileService.uploadFile(req.file, req.user._id);
+    const { categoryId, folderId } = req.body;
+    // 修复文件名编码问题
+    const originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+    const fileData = {
+      name: originalName,
+      type: req.file.mimetype,
+      size: req.file.size,
+      path: req.file.filename,
+      category_id: categoryId ? parseInt(categoryId) : null
+    };
 
-    res.status(201).json({ success: true, file });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
+    try {
+      const file = File.create(fileData);
+      res.status(201).json({ message: 'File uploaded successfully', file });
+    } catch (err) {
+      res.status(500).json({ message: 'Error saving file to database', error: err.message });
+    }
+  },
 
-// 获取文件列表
-const getFiles = async (req, res) => {
-  try {
-    const { folderId = null } = req.query;
-    
-    // 调用文件服务获取文件列表
-    const files = await fileService.getFiles(req.user._id, folderId);
-    
-    res.status(200).json({ success: true, files });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
+  getFiles: (req, res) => {
+    const { categoryId, folderPath } = req.query;
 
-// 创建文件夹
-const createFolder = async (req, res) => {
-  try {
-    const { name, parentId = null } = req.body;
+    try {
+      let files;
+      if (categoryId) {
+        files = File.getByCategoryId(categoryId);
+      } else if (folderPath) {
+        files = File.getByPath(folderPath);
+      } else {
+        files = File.getAll();
+      }
+      res.json({ files });
+    } catch (err) {
+      res.status(500).json({ message: 'Error fetching files', error: err.message });
+    }
+  },
 
-    // 调用文件服务创建文件夹
-    const folder = await fileService.createFolder(name, req.user._id, parentId);
-
-    res.status(201).json({ success: true, folder });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
-
-// 删除文件
-const deleteFile = async (req, res) => {
-  try {
+  getFileById: (req, res) => {
     const { id } = req.params;
 
-    // 调用文件服务删除文件
-    const result = await fileService.deleteFile(id, req.user._id);
+    try {
+      const file = File.getById(id);
+      if (!file) {
+        return res.status(404).json({ message: 'File not found' });
+      }
+      res.json({ file });
+    } catch (err) {
+      res.status(500).json({ message: 'Error fetching file', error: err.message });
+    }
+  },
 
-    res.status(200).json(result);
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
+  deleteFile: (req, res) => {
+    const { id } = req.params;
 
-// 更新文件信息
-const updateFile = async (req, res) => {
-  try {
+    try {
+      const file = File.getById(id);
+      if (!file) {
+        return res.status(404).json({ message: 'File not found' });
+      }
+
+      // 删除物理文件
+      const filePath = path.join(uploadsDir, file.path);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      // 从数据库中删除
+      File.delete(id);
+      res.json({ message: 'File deleted successfully' });
+    } catch (err) {
+      res.status(500).json({ message: 'Error deleting file', error: err.message });
+    }
+  },
+
+  renameFile: (req, res) => {
     const { id } = req.params;
     const { name } = req.body;
 
-    // 调用文件服务更新文件信息
-    const file = await fileService.updateFile(id, { name }, req.user._id);
+    if (!name) {
+      return res.status(400).json({ message: 'New filename is required' });
+    }
 
-    res.status(200).json({ success: true, file });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    try {
+      const file = File.getById(id);
+      if (!file) {
+        return res.status(404).json({ message: 'File not found' });
+      }
+
+      // 更新数据库中的文件名
+      File.update(id, { name });
+      
+      const updatedFile = File.getById(id);
+      res.json({ message: 'File renamed successfully', file: updatedFile });
+    } catch (err) {
+      res.status(500).json({ message: 'Error renaming file', error: err.message });
+    }
+  },
+
+  createFolder: (req, res) => {
+    const { name, path: folderPath, parentId } = req.body;
+
+    if (!name || !folderPath) {
+      return res.status(400).json({ message: 'Name and path are required' });
+    }
+
+    try {
+      const folderData = { name, path: folderPath, parent_id: parentId || null };
+      const folder = Folder.create(folderData);
+      res.status(201).json({ message: 'Folder created successfully', folder });
+    } catch (err) {
+      res.status(500).json({ message: 'Error creating folder', error: err.message });
+    }
+  },
+
+  getFolders: (req, res) => {
+    const { parentId, folderPath } = req.query;
+
+    try {
+      let folders;
+      if (parentId) {
+        folders = Folder.getByParentId(parentId);
+      } else if (folderPath) {
+        folders = Folder.getByPath(folderPath);
+      } else {
+        folders = Folder.getAll();
+      }
+      res.json({ folders });
+    } catch (err) {
+      res.status(500).json({ message: 'Error fetching folders', error: err.message });
+    }
+  },
+
+  deleteFolder: (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const folder = Folder.getById(id);
+      if (!folder) {
+        return res.status(404).json({ message: 'Folder not found' });
+      }
+
+      const hasChildren = Folder.hasChildren(id);
+      if (hasChildren) {
+        return res.status(400).json({ 
+          message: 'Folder contains files or subfolders. Please delete them first.' 
+        });
+      }
+
+      Folder.delete(id);
+      res.json({ message: 'Folder deleted successfully' });
+    } catch (err) {
+      res.status(500).json({ message: 'Error deleting folder', error: err.message });
+    }
   }
 };
 
-// 获取文件夹列表
-const getFolders = async (req, res) => {
-  try {
-    const { parentId = null } = req.query;
-    
-    // 调用文件服务获取文件夹列表
-    const folders = await fileService.getFolders(req.user._id, parentId);
-    
-    res.status(200).json({ success: true, folders });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
-
-module.exports = { uploadFile, getFiles, createFolder, deleteFile, updateFile, getFolders };
+module.exports = fileController;

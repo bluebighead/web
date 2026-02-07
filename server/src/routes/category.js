@@ -1,13 +1,13 @@
 const express = require('express');
-const { createCategory, getCategories, updateCategory, deleteCategory, getCategoryTree } = require('../controllers/categoryController');
-const { protect } = require('../middlewares/auth');
+const categoryController = require('../controllers/categoryController');
 
 const router = express.Router();
 
-router.post('/', protect, createCategory);
-router.get('/', protect, getCategories);
-router.get('/tree', protect, getCategoryTree);
-router.put('/:id', protect, updateCategory);
-router.delete('/:id', protect, deleteCategory);
+router.get('/', categoryController.getAllCategories);
+router.get('/:id', categoryController.getCategoryById);
+router.post('/', categoryController.createCategory);
+router.put('/:id', categoryController.updateCategory);
+router.delete('/:id', categoryController.deleteCategory);
+router.get('/:parentId/subcategories', categoryController.getSubCategories);
 
 module.exports = router;

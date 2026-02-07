@@ -76,18 +76,18 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUpload }) => {
 
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition duration-200 ${isDragActive ? 'border-primary bg-blue-50' : 'border-gray-300 hover:border-primary hover:bg-blue-50'}`}
+        className={`border-2 border-dashed rounded-lg p-6 sm:p-8 text-center cursor-pointer transition duration-200 ${isDragActive ? 'border-primary bg-blue-50' : 'border-gray-300 hover:border-primary hover:bg-blue-50'}`}
       >
         <input {...getInputProps()} />
         {isDragActive ? (
           <p className="text-primary">拖放文件到此处</p>
         ) : (
           <div>
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg className="mx-auto h-10 sm:h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
-            <p className="mt-2 text-sm text-gray-600">点击或拖放文件到此处上传</p>
-            <p className="mt-1 text-xs text-gray-500">支持图片、文档、视频等多种格式，单个文件最大100MB</p>
+            <p className="mt-2 text-sm sm:text-base text-gray-600">点击或拖放文件到此处上传</p>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500">支持图片、文档、视频等多种格式，单个文件最大100MB</p>
           </div>
         )}
       </div>

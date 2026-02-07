@@ -1,15 +1,16 @@
 const express = require('express');
-const { uploadFile, getFiles, createFolder, deleteFile, updateFile, getFolders } = require('../controllers/fileController');
-const { protect } = require('../middlewares/auth');
+const fileController = require('../controllers/fileController');
 const upload = require('../middlewares/upload');
 
 const router = express.Router();
 
-router.post('/upload', protect, upload.single('file'), uploadFile);
-router.get('/list', protect, getFiles);
-router.get('/folders', protect, getFolders);
-router.post('/folder', protect, createFolder);
-router.delete('/:id', protect, deleteFile);
-router.put('/:id', protect, updateFile);
+router.post('/upload', upload.single('file'), fileController.uploadFile);
+router.get('/', fileController.getFiles);
+router.get('/:id', fileController.getFileById);
+router.delete('/:id', fileController.deleteFile);
+router.put('/:id/rename', fileController.renameFile);
+router.post('/folder', fileController.createFolder);
+router.get('/folders', fileController.getFolders);
+router.delete('/folder/:id', fileController.deleteFolder);
 
 module.exports = router;
